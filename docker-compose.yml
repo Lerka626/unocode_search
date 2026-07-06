@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # 1. Сервис Базы Данных (Hydra)
+  db:
+    image: ghcr.io/hydradatabase/hydra:latest
+    container_name: hydra-container
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Lerkaa626
+      - POSTGRES_DB=postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - hydra_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Сервис Бэкенда (FastAPI)
+  backend:
+    build: ./backend
+    container_name: fastapi-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_USER=postgres
+      - DB_PASSWORD=Lerkaa626
+      - DB_NAME=postgres
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  hydra_data:
