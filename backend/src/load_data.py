@@ -16,21 +16,29 @@ def main():
     conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
 
-    sql_path = os.path.join("..", "data", "create_db.sql")
+    # ИСПРАВЛЕНО: путь к .sql файлу относительно корня контейнера (/app)
+    sql_path = os.path.join("data", "create_db.sql")
     if os.path.exists(sql_path):
         print(f"Выполняю скрипт создания таблиц из {sql_path}...")
         with open(sql_path, "r", encoding="utf-8") as f:
             cur.execute(f.read())
         conn.commit()
     else:
-        print(f"Файл {sql_path} не найден")
+        print(f"КРИТИЧЕСКАЯ ОШИБКА: Файл {sql_path} не найден!")
+        return  # Завершаем работу, если нет схемы БД
 
+    print("Загружаю модель эмбеддингов all-MiniLM-L6-v2...")
     model = SentenceTransformer("all-MiniLM-L6-v2")
 
-    csv_path = "C:/Users/Lerik/OneDrive/Desktop/Uncode/search_product/backend/data/grocery_chain_data.csv" 
+    # ИСПРАВЛЕНО: убрали локальный путь C:/... и сделали его относительным для контейнера
+    csv_path = os.path.join("data", "grocery_chain_data.csv") 
+
+    if not os.path.exists(csv_path):
+        print(f"КРИТИЧЕСКАЯ ОШИБКА: Файл с данными {csv_path} не найден!")
+        return
 
     df = pd.read_csv(csv_path)
-    print(format(f"Начинаю загрузку {len(df)} строк в базу данных Hydra..."))
+    print(f"Начинаю загрузку {len(df)} строк в базу данных...")
 
     for index, row in df.iterrows():
         text_representation = f"Product: {row['product_name']}, Aisle: {row['aisle']}, Store: {row['store_name']}"
@@ -61,6 +69,7 @@ def main():
         cur.execute(sql_vector, (product_id, vector))
 
     conn.commit()
+    print("=== [LOAD DATA SUCCESS] Все данные успешно загружены в базу! ===")
     cur.close()
     conn.close()
 
