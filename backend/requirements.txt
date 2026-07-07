@@ -1,6 +1,9 @@
+--index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2
+--extra-index-url https://pypi.org/simple
+sentence-transformers
 fastapi
 uvicorn
 psycopg2-binary
-sentence-transformers
 requests
 pandas
