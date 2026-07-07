@@ -26,7 +26,7 @@ def startup_init_db():
     print("=== [STARTUP] Запуск скрипта load_data.py для проверки и заливки БД ===")
     try:
         # Запускаем load_data.py как подпроцесс
-        result = subprocess.run(["python", "load_data.py"], capture_output=True, text=True, timeout=60)
+        result = subprocess.run(["python", "src/load_data.py"], capture_output=True, text=True, timeout=60)
         
         if result.returncode == 0:
             print("=== [STARTUP SUCCESS] База данных успешно проверена/инициализирована ===")
