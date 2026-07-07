@@ -1,5 +1,6 @@
 import os
 import requests
+import subprocess  # Добавили для запуска load_data.py
 from fastapi import FastAPI, HTTPException
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -17,9 +18,25 @@ DB_CONFIG = {
     "port": int(os.getenv("DB_PORT", 5432))
 }
 
-
-# OPENROUTER_API_KEY = "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"
 OPENROUTER_API_KEY = "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"
+
+# --- Автоматический запуск скрипта миграции при старте приложения ---
+@app.on_event("startup")
+def startup_init_db():
+    print("=== [STARTUP] Запуск скрипта load_data.py для проверки и заливки БД ===")
+    try:
+        # Запускаем load_data.py как подпроцесс
+        result = subprocess.run(["python", "load_data.py"], capture_output=True, text=True, timeout=60)
+        
+        if result.returncode == 0:
+            print("=== [STARTUP SUCCESS] База данных успешно проверена/инициализирована ===")
+            print(result.stdout)
+        else:
+            print("=== [STARTUP ERROR] Скрипт load_data.py завершился с ошибкой ===")
+            print(result.stderr)
+    except Exception as e:
+        print(f"=== [STARTUP EXCEPTION] Не удалось запустить скрипт load_data.py: {e} ===")
+# --------------------------------------------------------------------
 
 def get_db_connection():
     return psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
@@ -42,7 +59,7 @@ def get_llm_answer(context: str, question: str) -> str:
 Ответ:"""
 
     payload = {
-        "model": "openrouter/free",  # or "google/gemma-2-9b-it:free" or "meta-llama/llama-3-8b-instruct:free"
+        "model": "openrouter/free",
         "messages": [{"role": "user", "content": prompt}]
     }
 
