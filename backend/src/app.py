@@ -1,6 +1,7 @@
 import os
 import requests
-import subprocess  # Добавили для запуска load_data.py
+import subprocess
+import asyncio
 from fastapi import FastAPI, HTTPException
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -8,6 +9,7 @@ from sentence_transformers import SentenceTransformer
 
 app = FastAPI(title="Semantic vs Vector Search Comparison")
 
+# Инициализация модели эмбеддингов для эндпоинтов поисков
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 DB_CONFIG = {
@@ -20,22 +22,35 @@ DB_CONFIG = {
 
 OPENROUTER_API_KEY = "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"
 
+def run_migration_in_background():
+    """
+    Фоновая функция для запуска load_data.py.
+    Убран таймаут, чтобы тяжелый процесс генерации эмбеддингов для строк CSV 
+    мог завершиться без принудительной остановки.
+    """
+    print("=== [BACKGROUND] Начался фоновый запуск скрипта load_data.py ===")
+    try:
+        # Запускаем скрипт без timeout=60
+        result = subprocess.run(["python", "src/load_data.py"], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print("=== [BACKGROUND SUCCESS] База данных успешно проверена/инициализирована ===")
+            print(result.stdout)
+        else:
+            print("=== [BACKGROUND ERROR] Скрипт load_data.py завершился с ошибкой ===")
+            print(result.stderr)
+    except Exception as e:
+        print(f"=== [BACKGROUND EXCEPTION] Не удалось запустить скрипт load_data.py: {e} ===")
+
 # --- Автоматический запуск скрипта миграции при старте приложения ---
 @app.on_event("startup")
 def startup_init_db():
-    print("=== [STARTUP] Запуск скрипта load_data.py для проверки и заливки БД ===")
-    try:
-        # Запускаем load_data.py как подпроцесс
-        result = subprocess.run(["python", "src/load_data.py"], capture_output=True, text=True, timeout=60)
-        
-        if result.returncode == 0:
-            print("=== [STARTUP SUCCESS] База данных успешно проверена/инициализирована ===")
-            print(result.stdout)
-        else:
-            print("=== [STARTUP ERROR] Скрипт load_data.py завершился с ошибкой ===")
-            print(result.stderr)
-    except Exception as e:
-        print(f"=== [STARTUP EXCEPTION] Не удалось запустить скрипт load_data.py: {e} ===")
+    print("=== [STARTUP] FastAPI успешно стартует. Запускаем миграцию в фоновом потоке... ===")
+    
+    # Запускаем выполнение функции в отдельном потоке (executor),
+    # чтобы не блокировать цикл событий (event loop) самого FastAPI
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, run_migration_in_background)
 # --------------------------------------------------------------------
 
 def get_db_connection():
