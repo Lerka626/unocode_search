@@ -10,11 +10,11 @@ app = FastAPI(title="Semantic vs Vector Search Comparison")
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 DB_CONFIG = {
-    "dbname": "postgres",
-    "user": "postgres",
-    "password": "Lerkaa626", 
-    "host": "db",
-    "port": 5432
+    "dbname": os.getenv("DB_NAME", "postgres"),
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", "Lerkaa626"), 
+    "host": os.getenv("DB_HOST", "db"),
+    "port": int(os.getenv("DB_PORT", 5432))
 }
 
 
