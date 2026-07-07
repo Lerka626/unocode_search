@@ -42,17 +42,6 @@ def run_migration_in_background():
     except Exception as e:
         print(f"=== [BACKGROUND EXCEPTION] Не удалось запустить скрипт load_data.py: {e} ===")
 
-# --- Автоматический запуск скрипта миграции при старте приложения ---
-@app.on_event("startup")
-def startup_init_db():
-    print("=== [STARTUP] FastAPI успешно стартует. Запускаем миграцию в фоновом потоке... ===")
-    
-    # Запускаем выполнение функции в отдельном потоке (executor),
-    # чтобы не блокировать цикл событий (event loop) самого FastAPI
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, run_migration_in_background)
-# --------------------------------------------------------------------
-
 def get_db_connection():
     return psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
 
